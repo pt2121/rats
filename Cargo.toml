@@ -1,0 +1,15 @@
+[package]
+name = "rats"
+version = "0.1.0"
+authors = ["Prat T <pt2121@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+regex = "1.3.7"
+lazy_static = "1.4.0"
+ansi_colours = "^1.0"
+ansi_term = "0.12.1"
+term_size = "1.0.0-beta.2"
+clap = "3.0.0-beta.1"

@@ -1,0 +1,59 @@
+name: Main
+
+on: push
+
+jobs:
+  codestyle:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: hecrj/setup-rust-action@v1
+      with:
+        components: rustfmt
+        rust-version: nightly
+    - uses: actions/checkout@v1
+    - run: cargo fmt --all -- --check  
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Rust
+        uses: hecrj/setup-rust-action@v1
+        with:
+          components: clippy
+      - uses: actions/checkout@v2
+      - run: cargo clippy --all-targets -- -D clippy::all
+
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Rust
+        uses: hecrj/setup-rust-action@v1
+      - uses: actions/checkout@master
+      - run: cargo check --all
+
+  test:
+    needs: [codestyle, lint, compile]
+    strategy:
+      matrix:
+        rust: [stable, beta]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Rust
+        uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: ${{ matrix.rust }}
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Test
+        run: cargo test
+      - name: Coverage
+        if: matrix.rust == 'stable'
+        run: |
+          # https://github.com/xd009642/coveralls-api/blob/6da4ccd7c6eaf1df04cfd1e560362de70fa80605/src/lib.rs#L247-L262
+          export TRAVIS_JOB_ID=${GITHUB_SHA}
+          export TRAVIS_PULL_REQUEST=false
+          export TRAVIS_BRANCH=${GITHUB_REF##*/}
+          cargo install cargo-tarpaulin
+          cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
