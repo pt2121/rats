@@ -34,26 +34,31 @@ jobs:
 
   test:
     needs: [codestyle, lint, compile]
-    strategy:
-      matrix:
-        rust: [stable, beta]
+    name: Test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Setup Rust
-        uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: ${{ matrix.rust }}
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Test
-        run: cargo test
-      - name: Coverage
-        if: matrix.rust == 'stable'
-        run: |
-          # https://github.com/xd009642/coveralls-api/blob/6da4ccd7c6eaf1df04cfd1e560362de70fa80605/src/lib.rs#L247-L262
-          export TRAVIS_JOB_ID=${GITHUB_SHA}
-          export TRAVIS_PULL_REQUEST=false
-          export TRAVIS_BRANCH=${GITHUB_REF##*/}
-          cargo install cargo-tarpaulin
-          cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          version: '0.9.0'
+          args: '-- --test-threads 1'
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1.0.2
+        with:
+          token: e5af0f64-cc5c-434e-be96-40d3a88ef143
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v1
+        with:
+          name: code-coverage-report
+          path: cobertura.xml
