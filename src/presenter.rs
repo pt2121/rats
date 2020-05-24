@@ -41,7 +41,7 @@ impl Presenter for Printer {
             process.line_pid,
             process.target.unwrap_or_default()
         );
-        let buf = indent_wrap(&message);
+        let buf = indent_wrap(&message, term_width_or_width(WIDTH));
         println!("\n{}{}", Printer::fmt_header("", HEADER_SIZE), buf);
     }
 
@@ -50,14 +50,13 @@ impl Presenter for Printer {
             "Process {} ended for {}",
             process.line_pid, process.line_package
         );
-        let buf = indent_wrap(&message);
+        let buf = indent_wrap(&message, term_width_or_width(WIDTH));
         println!("\n{}{}", Printer::fmt_header("", HEADER_SIZE), buf);
     }
 
     fn print_log(&self, log: &LogLine, is_new_tag: bool) {
-        // right-align tag title and allocate color if needed
         let display_tag = if is_new_tag {
-            slice_from_end(&log.tag.as_str(), TAG_WIDTH - 1).unwrap_or(&log.tag)
+            take_last(&log.tag.as_str(), TAG_WIDTH).unwrap_or(&log.tag)
         } else {
             ""
         };
@@ -88,7 +87,7 @@ impl Presenter for Printer {
             msg.push_str(" tid=");
             msg.push_str(tid.as_str());
         }
-        let buf = indent_wrap(msg.as_str());
+        let buf = indent_wrap(msg.as_str(), term_width_or_width(WIDTH));
         println!(" {} {}", level, buf);
     }
 }
@@ -111,8 +110,7 @@ impl Colors {
     }
 }
 
-fn indent_wrap(message: &str) -> String {
-    let width = term_width().unwrap_or(WIDTH).min(WIDTH);
+fn indent_wrap(message: &str, width: usize) -> String {
     let wrap_area = width - HEADER_SIZE;
     let mut current = 0;
     let mut buf = String::new();
@@ -135,10 +133,74 @@ fn indent_wrap(message: &str) -> String {
     buf
 }
 
+fn term_width_or_width(width: usize) -> usize {
+    term_width().unwrap_or(width).min(width)
+}
+
 fn term_width() -> Option<usize> {
     term_size::dimensions().map(|(w, _)| w)
 }
 
-fn slice_from_end(s: &str, n: usize) -> Option<&str> {
-    s.char_indices().rev().nth(n).map(|(i, _)| &s[i..])
+fn take_last(s: &str, size: usize) -> Option<&str> {
+    if size < 1 {
+        return None;
+    }
+    if size >= s.len() {
+        return Some(s);
+    }
+    s.char_indices().rev().nth(size - 1).map(|(i, _)| &s[i..])
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::presenter::{indent_wrap, take_last, Printer, HEADER_SIZE};
+
+    #[test]
+    fn test_fmt_header_basic() {
+        let formatted = Printer::fmt_header("TAG", 4);
+
+        assert_eq!(formatted, " TAG")
+    }
+
+    #[test]
+    fn test_fmt_header_no_filled() {
+        let formatted = Printer::fmt_header("BANGKOK", 4);
+
+        assert_eq!(formatted, "BANGKOK")
+    }
+
+    #[test]
+    fn test_take_last_basic() {
+        let sliced = take_last("54321", 2);
+
+        assert_eq!(sliced.unwrap(), "21")
+    }
+
+    #[test]
+    fn test_take_last_short() {
+        let sliced = take_last("1", 2);
+
+        assert_eq!(sliced.unwrap(), "1")
+    }
+
+    #[test]
+    fn test_take_last_invalid_size() {
+        let sliced = take_last("54321", 0);
+
+        assert!(sliced.is_none())
+    }
+
+    #[test]
+    fn test_indent_wrap_short() {
+        let result = indent_wrap("01234", HEADER_SIZE + 5);
+
+        assert_eq!("01234", result)
+    }
+
+    #[test]
+    fn test_indent_wrap_long() {
+        let result = indent_wrap("0123456789", HEADER_SIZE + 5);
+
+        assert_eq!("01234\n                                     56789", result)
+    }
 }

@@ -227,6 +227,7 @@ mod tests {
     use crate::parser::PID_KILL;
     use crate::parser::PID_START_5_1;
     use crate::parser::{parse_death, parse_log_line, parse_start_proc, LogLevel};
+    use std::str::FromStr;
 
     #[test]
     fn test_parse_start_proc() {
@@ -256,6 +257,13 @@ mod tests {
     fn test_parse_death_missing_pid() {
         let str_log: &str = "Process com.example.urg (pid ) has died";
         let proc = parse_death("ActivityManager", str_log);
+        assert!(proc.is_none());
+    }
+
+    #[test]
+    fn test_parse_death_ignore_tag() {
+        let str_log: &str = "Process com.example.urg (pid 7404) has died";
+        let proc = parse_death("Not ActivityManager", str_log);
         assert!(proc.is_none());
     }
 
@@ -410,5 +418,22 @@ mod tests {
 
         assert_eq!(pid, "7404");
         assert_eq!(package_line, "com.example.urg");
+    }
+
+    #[test]
+    fn log_level_from_string_basic() {
+        assert_eq!(LogLevel::from_str("V").unwrap(), LogLevel::VERBOSE);
+        assert_eq!(LogLevel::from_str("D").unwrap(), LogLevel::DEBUG);
+        assert_eq!(LogLevel::from_str("I").unwrap(), LogLevel::INFO);
+        assert_eq!(LogLevel::from_str("W").unwrap(), LogLevel::WARN);
+        assert_eq!(LogLevel::from_str("E").unwrap(), LogLevel::ERROR);
+        assert_eq!(LogLevel::from_str("A").unwrap(), LogLevel::ASSERT);
+    }
+
+    #[test]
+    fn log_level_from_string_invalid() {
+        assert!(LogLevel::from_str("X").is_err());
+        assert!(LogLevel::from_str("").is_err());
+        assert!(LogLevel::from_str(" ").is_err());
     }
 }
