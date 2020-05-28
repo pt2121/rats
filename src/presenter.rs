@@ -31,6 +31,33 @@ impl Printer {
     fn fmt_header(tag: &str, width: usize) -> String {
         format!("{tag:>0$}", width, tag = tag)
     }
+
+    fn build_date_time_pid_str(log: &LogLine, is_new_tag: bool, msg: &mut String) {
+        if is_new_tag {
+            if let Some(date) = log.date.as_ref() {
+                msg.push_str("date=");
+                msg.push_str(date.as_str());
+                msg.push_str(" ");
+            }
+
+            if let Some(time) = log.time.as_ref() {
+                msg.push_str("time=");
+                msg.push_str(time.as_str());
+                msg.push_str(" ");
+            }
+
+            if let Some(tid) = log.tid.as_ref() {
+                msg.push_str("tid=");
+                msg.push_str(tid.as_str());
+                msg.push_str(" ");
+            }
+
+            if !msg.is_empty() {
+                msg.remove(msg.len() - 1);
+                msg.push_str("\n")
+            }
+        }
+    }
 }
 
 impl Presenter for Printer {
@@ -72,21 +99,8 @@ impl Presenter for Printer {
 
         let level = style.paint(format!(" {} ", log.level)).to_string();
         let mut msg = String::new();
+        Printer::build_date_time_pid_str(log, is_new_tag, &mut msg);
         msg.push_str(log.message.as_str());
-        if let Some(date) = log.date.as_ref() {
-            msg.push_str(" date=");
-            msg.push_str(date.as_str());
-        }
-
-        if let Some(time) = log.time.as_ref() {
-            msg.push_str(" time=");
-            msg.push_str(time.as_str());
-        }
-
-        if let Some(tid) = log.tid.as_ref() {
-            msg.push_str(" tid=");
-            msg.push_str(tid.as_str());
-        }
         let buf = indent_wrap(msg.as_str(), term_width_or_width(WIDTH));
         println!(" {} {}", level, buf);
     }
@@ -153,6 +167,7 @@ fn take_last(s: &str, size: usize) -> Option<&str> {
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::{LogLevel, LogLine};
     use crate::presenter::{indent_wrap, take_last, Printer, HEADER_SIZE};
 
     #[test]
@@ -202,5 +217,59 @@ mod tests {
         let result = indent_wrap("0123456789", HEADER_SIZE + 5);
 
         assert_eq!("01234\n                                     56789", result)
+    }
+
+    #[test]
+    fn add_date_time_pid() {
+        let line = LogLine {
+            level: LogLevel::VERBOSE,
+            tag: "tag".to_string(),
+            owner: "owner".to_string(),
+            message: "message".to_string(),
+            date: Some("date".to_string()),
+            time: Some("time".to_string()),
+            tid: Some("tid".to_string()),
+        };
+
+        let mut msg = String::new();
+        Printer::build_date_time_pid_str(&line, true, &mut msg);
+
+        assert_eq!("date=date time=time tid=tid\n", msg)
+    }
+
+    #[test]
+    fn not_add_date_time_pid_if_old_tag() {
+        let line = LogLine {
+            level: LogLevel::VERBOSE,
+            tag: "tag".to_string(),
+            owner: "owner".to_string(),
+            message: "message".to_string(),
+            date: Some("date".to_string()),
+            time: Some("time".to_string()),
+            tid: Some("tid".to_string()),
+        };
+
+        let mut msg = String::new();
+        Printer::build_date_time_pid_str(&line, false, &mut msg);
+
+        assert_eq!("", msg)
+    }
+
+    #[test]
+    fn not_add_date_time_pid_if_none() {
+        let line = LogLine {
+            level: LogLevel::VERBOSE,
+            tag: "tag".to_string(),
+            owner: "owner".to_string(),
+            message: "message".to_string(),
+            date: None,
+            time: None,
+            tid: None,
+        };
+
+        let mut msg = String::new();
+        Printer::build_date_time_pid_str(&line, false, &mut msg);
+
+        assert_eq!("", msg)
     }
 }
