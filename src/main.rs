@@ -5,7 +5,7 @@ extern crate term_size;
 use crate::parser::parse_log_line;
 use crate::parser::parse_start_proc;
 use crate::parser::{parse_death, LogLevel};
-use crate::presenter::{Presenter, Printer};
+use crate::presenter::{Presenter, Printer, DEFAULT_TAG_WIDTH};
 use clap::{App, Arg};
 use std::collections::HashSet;
 use std::io;
@@ -45,6 +45,14 @@ fn main() -> Result<(), std::io::Error> {
                 .about("Minimum level to be displayed")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("tag-width")
+                .short('w')
+                .long("tag-width")
+                .value_name("WIDTH")
+                .about("Width of log tag")
+                .takes_value(true),
+        )
         .get_matches();
 
     let packages: Vec<&str> = matches.values_of("package").map_or(vec![], |v| v.collect());
@@ -52,9 +60,13 @@ fn main() -> Result<(), std::io::Error> {
     let level: Option<LogLevel> = matches
         .value_of("level")
         .and_then(|l| LogLevel::from_str(l).ok());
+    let tag_width: usize = matches
+        .value_of("tag-width")
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(DEFAULT_TAG_WIDTH);
 
     let stdin = io::stdin();
-    let presenter: Box<dyn Presenter> = Box::new(Printer::new());
+    let presenter: Box<dyn Presenter> = Box::new(Printer::new(tag_width));
     let mut pids: HashSet<String> = HashSet::new();
     let mut last_tag: Option<String> = None;
 
