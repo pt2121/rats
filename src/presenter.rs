@@ -2,8 +2,7 @@ use crate::parser::{LogLevel, LogLine, Process};
 use ansi_term::Colour::White;
 use ansi_term::{Colour, Style};
 
-static TAG_WIDTH: usize = 32;
-static HEADER_SIZE: usize = TAG_WIDTH + 1 + 3 + 1;
+pub static DEFAULT_TAG_WIDTH: usize = 32;
 static WIDTH: usize = 180;
 
 #[derive(Debug, Clone)]
@@ -19,12 +18,16 @@ pub trait Presenter {
 
 pub struct Printer {
     colors: Colors,
+    tag_width: usize,
+    header_size: usize,
 }
 
 impl Printer {
-    pub fn new() -> Self {
+    pub fn new(tag_width: usize) -> Self {
         Printer {
             colors: Colors::new(),
+            tag_width,
+            header_size: tag_width + 1 + 3 + 1,
         }
     }
 
@@ -32,7 +35,13 @@ impl Printer {
         format!("{tag:>0$}", width, tag = tag)
     }
 
-    fn build_date_time_pid_str(log: &LogLine, is_new_tag: bool, msg: &mut String) {
+    fn build_date_time_pid_str(
+        log: &LogLine,
+        is_new_tag: bool,
+        msg: &mut String,
+        tag_width: usize,
+        level: &str,
+    ) {
         if is_new_tag {
             if let Some(date) = log.date.as_ref() {
                 msg.push_str("date=");
@@ -54,7 +63,10 @@ impl Printer {
 
             if !msg.is_empty() {
                 msg.remove(msg.len() - 1);
-                msg.push_str("\n")
+                msg.push('\n');
+                msg.push_str(" ".repeat(tag_width + 1).as_str());
+                msg.push_str(level);
+                msg.push_str(" ");
             }
         }
     }
@@ -68,8 +80,8 @@ impl Presenter for Printer {
             process.line_pid,
             process.target.unwrap_or_default()
         );
-        let buf = indent_wrap(&message, term_width_or_width(WIDTH));
-        println!("\n{}{}", Printer::fmt_header("", HEADER_SIZE), buf);
+        let buf = indent_wrap(&message, term_width_or_width(WIDTH), self.header_size);
+        println!("\n{}{}", Printer::fmt_header("", self.header_size), buf);
     }
 
     fn print_proc_end(&self, process: Process) {
@@ -77,18 +89,18 @@ impl Presenter for Printer {
             "Process {} ended for {}",
             process.line_pid, process.line_package
         );
-        let buf = indent_wrap(&message, term_width_or_width(WIDTH));
-        println!("\n{}{}", Printer::fmt_header("", HEADER_SIZE), buf);
+        let buf = indent_wrap(&message, term_width_or_width(WIDTH), self.header_size);
+        println!("\n{}{}", Printer::fmt_header("", self.header_size), buf);
     }
 
     fn print_log(&self, log: &LogLine, is_new_tag: bool) {
         let display_tag = if is_new_tag {
-            take_last(&log.tag.as_str(), TAG_WIDTH).unwrap_or(&log.tag)
+            take_last(&log.tag.as_str(), self.tag_width).unwrap_or(&log.tag)
         } else {
             ""
         };
 
-        print!("{}", Printer::fmt_header(&display_tag, TAG_WIDTH));
+        print!("{}", Printer::fmt_header(&display_tag, self.tag_width));
 
         let style = match log.level {
             LogLevel::DEBUG => self.colors.debug,
@@ -99,9 +111,12 @@ impl Presenter for Printer {
 
         let level = style.paint(format!(" {} ", log.level)).to_string();
         let mut msg = String::new();
-        Printer::build_date_time_pid_str(log, is_new_tag, &mut msg);
-        msg.push_str(log.message.as_str());
-        let buf = indent_wrap(msg.as_str(), term_width_or_width(WIDTH));
+        Printer::build_date_time_pid_str(log, is_new_tag, &mut msg, self.tag_width, level.as_str());
+        let buf = indent_wrap(
+            log.message.as_str(),
+            term_width_or_width(WIDTH),
+            self.header_size,
+        );
         println!(" {} {}", level, buf);
     }
 }
@@ -124,8 +139,8 @@ impl Colors {
     }
 }
 
-fn indent_wrap(message: &str, width: usize) -> String {
-    let wrap_area = width - HEADER_SIZE;
+fn indent_wrap(message: &str, width: usize, header_size: usize) -> String {
+    let wrap_area = width - header_size;
     let mut current = 0;
     let mut buf = String::new();
     let chars = message.chars().collect::<Vec<_>>();
@@ -140,7 +155,7 @@ fn indent_wrap(message: &str, width: usize) -> String {
         );
         if next < chars.len() {
             buf.push('\n');
-            buf.push_str(" ".repeat(HEADER_SIZE).as_str());
+            buf.push_str(" ".repeat(header_size).as_str());
         }
         current = next
     }
@@ -168,7 +183,9 @@ fn take_last(s: &str, size: usize) -> Option<&str> {
 #[cfg(test)]
 mod tests {
     use crate::parser::{LogLevel, LogLine};
-    use crate::presenter::{indent_wrap, take_last, Printer, HEADER_SIZE};
+    use crate::presenter::{indent_wrap, take_last, Printer, DEFAULT_TAG_WIDTH};
+
+    static HEADER_SIZE: usize = DEFAULT_TAG_WIDTH + 1 + 3 + 1;
 
     #[test]
     fn test_fmt_header_basic() {
@@ -207,14 +224,14 @@ mod tests {
 
     #[test]
     fn test_indent_wrap_short() {
-        let result = indent_wrap("01234", HEADER_SIZE + 5);
+        let result = indent_wrap("01234", HEADER_SIZE + 5, HEADER_SIZE);
 
         assert_eq!("01234", result)
     }
 
     #[test]
     fn test_indent_wrap_long() {
-        let result = indent_wrap("0123456789", HEADER_SIZE + 5);
+        let result = indent_wrap("0123456789", HEADER_SIZE + 5, HEADER_SIZE);
 
         assert_eq!("01234\n                                     56789", result)
     }
@@ -232,9 +249,12 @@ mod tests {
         };
 
         let mut msg = String::new();
-        Printer::build_date_time_pid_str(&line, true, &mut msg);
+        Printer::build_date_time_pid_str(&line, true, &mut msg, HEADER_SIZE + 5, "V");
 
-        assert_eq!("date=date time=time tid=tid\n", msg)
+        assert_eq!(
+            "date=date time=time tid=tid\n                                           V ",
+            msg
+        )
     }
 
     #[test]
@@ -250,7 +270,7 @@ mod tests {
         };
 
         let mut msg = String::new();
-        Printer::build_date_time_pid_str(&line, false, &mut msg);
+        Printer::build_date_time_pid_str(&line, false, &mut msg, HEADER_SIZE + 5, "V");
 
         assert_eq!("", msg)
     }
@@ -268,8 +288,52 @@ mod tests {
         };
 
         let mut msg = String::new();
-        Printer::build_date_time_pid_str(&line, false, &mut msg);
+        Printer::build_date_time_pid_str(&line, false, &mut msg, HEADER_SIZE + 5, "V");
 
         assert_eq!("", msg)
+    }
+
+    #[test]
+    fn add_date_time_pid_header_tag_width_0() {
+        let line = LogLine {
+            level: LogLevel::VERBOSE,
+            tag: "tag".to_string(),
+            owner: "owner".to_string(),
+            message: "message".to_string(),
+            date: Some("date".to_string()),
+            time: Some("time".to_string()),
+            tid: Some("tid".to_string()),
+        };
+
+        let mut msg = String::new();
+        Printer::build_date_time_pid_str(&line, true, &mut msg, 0, "V");
+
+        assert_eq!("date=date time=time tid=tid\n V ", msg)
+    }
+
+    #[test]
+    fn add_date_time_pid_header_e_level() {
+        let line = LogLine {
+            level: LogLevel::VERBOSE,
+            tag: "tag".to_string(),
+            owner: "owner".to_string(),
+            message: "message".to_string(),
+            date: Some("date".to_string()),
+            time: Some("time".to_string()),
+            tid: Some("tid".to_string()),
+        };
+
+        let mut msg = String::new();
+        Printer::build_date_time_pid_str(&line, true, &mut msg, 0, "E");
+
+        assert_eq!("date=date time=time tid=tid\n E ", msg)
+    }
+
+    #[test]
+    fn new_tag_width() {
+        let printer = Printer::new(50);
+
+        assert_eq!(55, printer.header_size);
+        assert_eq!(50, printer.tag_width)
     }
 }
