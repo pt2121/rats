@@ -21,36 +21,36 @@ fn main() -> Result<(), std::io::Error> {
         .author("pt2121@users.noreply.github.com")
         .arg(
             Arg::with_name("package")
-                .short('p')
+                .short("p")
                 .long("package")
                 .value_name("applicationId")
                 .multiple(true)
-                .about("Application package name(s)")
+                .help("Application package name(s)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("tag")
-                .short('t')
+                .short("t")
                 .long("tag")
                 .value_name("TAG")
                 .multiple(true)
-                .about("Filter output by specified tag(s)")
+                .help("Filter output by specified tag(s)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("level")
-                .short('l')
+                .short("l")
                 .long("level")
                 .value_name("V,D,I,W,E,F,v,d,i,w,e,f")
-                .about("Minimum level to be displayed")
+                .help("Minimum level to be displayed")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("tag-width")
-                .short('w')
+                .short("w")
                 .long("tag-width")
                 .value_name("WIDTH")
-                .about("Width of log tag")
+                .help("Width of log tag")
                 .takes_value(true),
         )
         .get_matches();

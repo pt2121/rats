@@ -46,19 +46,19 @@ impl Printer {
             if let Some(date) = log.date.as_ref() {
                 msg.push_str("date=");
                 msg.push_str(date.as_str());
-                msg.push_str(" ");
+                msg.push(' ');
             }
 
             if let Some(time) = log.time.as_ref() {
                 msg.push_str("time=");
                 msg.push_str(time.as_str());
-                msg.push_str(" ");
+                msg.push(' ');
             }
 
             if let Some(tid) = log.tid.as_ref() {
                 msg.push_str("tid=");
                 msg.push_str(tid.as_str());
-                msg.push_str(" ");
+                msg.push(' ');
             }
 
             if !msg.is_empty() {
@@ -66,7 +66,7 @@ impl Printer {
                 msg.push('\n');
                 msg.push_str(" ".repeat(tag_width + 1).as_str());
                 msg.push_str(level);
-                msg.push_str(" ");
+                msg.push(' ');
             }
         }
     }
@@ -103,9 +103,9 @@ impl Presenter for Printer {
         print!("{}", Printer::fmt_header(&display_tag, self.tag_width));
 
         let style = match log.level {
-            LogLevel::DEBUG => self.colors.debug,
-            LogLevel::WARN => self.colors.warn,
-            LogLevel::ERROR => self.colors.error,
+            LogLevel::Debug => self.colors.debug,
+            LogLevel::Warn => self.colors.warn,
+            LogLevel::Error => self.colors.error,
             _ => White.dimmed().reverse(),
         };
 
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn add_date_time_pid() {
         let line = LogLine {
-            level: LogLevel::VERBOSE,
+            level: LogLevel::Verbose,
             tag: "tag".to_string(),
             owner: "owner".to_string(),
             message: "message".to_string(),
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn not_add_date_time_pid_if_old_tag() {
         let line = LogLine {
-            level: LogLevel::VERBOSE,
+            level: LogLevel::Verbose,
             tag: "tag".to_string(),
             owner: "owner".to_string(),
             message: "message".to_string(),
@@ -278,7 +278,7 @@ mod tests {
     #[test]
     fn not_add_date_time_pid_if_none() {
         let line = LogLine {
-            level: LogLevel::VERBOSE,
+            level: LogLevel::Verbose,
             tag: "tag".to_string(),
             owner: "owner".to_string(),
             message: "message".to_string(),
@@ -296,7 +296,7 @@ mod tests {
     #[test]
     fn add_date_time_pid_header_tag_width_0() {
         let line = LogLine {
-            level: LogLevel::VERBOSE,
+            level: LogLevel::Verbose,
             tag: "tag".to_string(),
             owner: "owner".to_string(),
             message: "message".to_string(),
@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn add_date_time_pid_header_e_level() {
         let line = LogLine {
-            level: LogLevel::VERBOSE,
+            level: LogLevel::Verbose,
             tag: "tag".to_string(),
             owner: "owner".to_string(),
             message: "message".to_string(),

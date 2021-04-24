@@ -43,23 +43,23 @@ pub struct LogLine {
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
 pub enum LogLevel {
-    VERBOSE = 0,
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR,
-    ASSERT,
+    Verbose = 0,
+    Debug,
+    Info,
+    Warn,
+    Error,
+    Assert,
 }
 
 impl fmt::Display for LogLevel {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            LogLevel::VERBOSE => write!(f, "V"),
-            LogLevel::DEBUG => write!(f, "D"),
-            LogLevel::INFO => write!(f, "I"),
-            LogLevel::WARN => write!(f, "W"),
-            LogLevel::ERROR => write!(f, "E"),
-            LogLevel::ASSERT => write!(f, "A"),
+            LogLevel::Verbose => write!(f, "V"),
+            LogLevel::Debug => write!(f, "D"),
+            LogLevel::Info => write!(f, "I"),
+            LogLevel::Warn => write!(f, "W"),
+            LogLevel::Error => write!(f, "E"),
+            LogLevel::Assert => write!(f, "A"),
         }
     }
 }
@@ -74,12 +74,12 @@ impl FromStr for LogLevel {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "V" | "v" => Ok(LogLevel::VERBOSE),
-            "D" | "d" => Ok(LogLevel::DEBUG),
-            "I" | "i" => Ok(LogLevel::INFO),
-            "W" | "w" => Ok(LogLevel::WARN),
-            "E" | "e" => Ok(LogLevel::ERROR),
-            "A" | "a" => Ok(LogLevel::ASSERT),
+            "V" | "v" => Ok(LogLevel::Verbose),
+            "D" | "d" => Ok(LogLevel::Debug),
+            "I" | "i" => Ok(LogLevel::Info),
+            "W" | "w" => Ok(LogLevel::Warn),
+            "E" | "e" => Ok(LogLevel::Error),
+            "A" | "a" => Ok(LogLevel::Assert),
             _ => Err(ParseLogLevelError::UnknownLogLevel),
         }
     }
@@ -167,8 +167,8 @@ pub fn parse_log_line(line: &str) -> Option<LogLine> {
 
 fn log_line(line: &str) -> Option<LogLine> {
     LOG_LINE.captures(&line).map(|caps| {
-        let level: LogLevel = caps.name("level").map_or(LogLevel::VERBOSE, |s| {
-            LogLevel::from_str(s.as_str()).unwrap_or(LogLevel::VERBOSE)
+        let level: LogLevel = caps.name("level").map_or(LogLevel::Verbose, |s| {
+            LogLevel::from_str(s.as_str()).unwrap_or(LogLevel::Verbose)
         });
         let tag = caps
             .name("tag")
@@ -196,8 +196,8 @@ fn log_line(line: &str) -> Option<LogLine> {
 
 fn log_line_brief(line: &str) -> Option<LogLine> {
     LOG_LINE_BRIEF.captures(&line).map(|caps| {
-        let level: LogLevel = caps.name("level").map_or(LogLevel::VERBOSE, |s| {
-            LogLevel::from_str(s.as_str()).unwrap_or(LogLevel::VERBOSE)
+        let level: LogLevel = caps.name("level").map_or(LogLevel::Verbose, |s| {
+            LogLevel::from_str(s.as_str()).unwrap_or(LogLevel::Verbose)
         });
         let tag = caps
             .name("tag")
@@ -273,7 +273,7 @@ mod tests {
 
         let log = parse_log_line(str_log).unwrap();
 
-        assert_eq!(log.level, LogLevel::WARN);
+        assert_eq!(log.level, LogLevel::Warn);
         assert_eq!(log.tag, "AppOps");
         assert_eq!(log.tid.unwrap().as_str(), "2140");
         assert_eq!(log.owner, "2045");
@@ -289,7 +289,7 @@ mod tests {
 
         let log = parse_log_line(str_log).unwrap();
 
-        assert_eq!(log.level, LogLevel::ERROR);
+        assert_eq!(log.level, LogLevel::Error);
         assert_eq!(log.tag, "GnssHAL_GnssInterface");
         assert!(log.tid.is_none());
         assert_eq!(log.owner, "1800");
@@ -422,12 +422,12 @@ mod tests {
 
     #[test]
     fn log_level_from_string_basic() {
-        assert_eq!(LogLevel::from_str("V").unwrap(), LogLevel::VERBOSE);
-        assert_eq!(LogLevel::from_str("D").unwrap(), LogLevel::DEBUG);
-        assert_eq!(LogLevel::from_str("I").unwrap(), LogLevel::INFO);
-        assert_eq!(LogLevel::from_str("W").unwrap(), LogLevel::WARN);
-        assert_eq!(LogLevel::from_str("E").unwrap(), LogLevel::ERROR);
-        assert_eq!(LogLevel::from_str("A").unwrap(), LogLevel::ASSERT);
+        assert_eq!(LogLevel::from_str("V").unwrap(), LogLevel::Verbose);
+        assert_eq!(LogLevel::from_str("D").unwrap(), LogLevel::Debug);
+        assert_eq!(LogLevel::from_str("I").unwrap(), LogLevel::Info);
+        assert_eq!(LogLevel::from_str("W").unwrap(), LogLevel::Warn);
+        assert_eq!(LogLevel::from_str("E").unwrap(), LogLevel::Error);
+        assert_eq!(LogLevel::from_str("A").unwrap(), LogLevel::Assert);
     }
 
     #[test]

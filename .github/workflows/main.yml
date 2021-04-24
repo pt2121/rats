@@ -49,13 +49,11 @@ jobs:
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: '0.9.0'
+          version: '0.15.0'
           args: '-- --test-threads 1'
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1.0.2
-        with:
-          token: e5af0f64-cc5c-434e-be96-40d3a88ef143
+        uses: codecov/codecov-action@v1.4.1
 
       - name: Archive code coverage results
         uses: actions/upload-artifact@v1
